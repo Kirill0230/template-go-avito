@@ -1,0 +1,118 @@
+$kind: http-request
+description: ""
+url: "{{baseUrl}}/api/v1/trips"
+method: POST
+headers:
+  - key: Idempotency-Key
+    value: 44db80c4-f466-06b0-0895-0b43e2c1c46c
+    disabled: false
+    description: Ключ идемпотентности, генерирует клиент. Повторный запрос с тем же ключом и тем же телом возвращает уже созданную поездку и 200, с тем же ключом и другим телом — 409 idempotency_conflict. Заголовок относится к заданию со звёздочкой лабораторной работы 1, в основной части можно игнорировать.
+    $type: |-
+      {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "user_id": "5cb72c04-7650-45c9-a79b-bcdba0631e0c",
+      "driver_id": "8860b315-ec86-42eb-a17c-7c163d721ff5",
+      "start_point": {
+        "latitude": 59.9398,
+        "longitude": 30.3146
+      },
+      "end_point": {
+        "latitude": 59.929,
+        "longitude": 30.3626
+      },
+      "price": 1450
+    }
+  $type: |-
+    {
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "driver_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "start_point": {
+          "type": "object",
+          "description": "Географические координаты WGS 84.",
+          "properties": {
+            "latitude": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90,
+              "example": 59.9398,
+              "format": "double"
+            },
+            "longitude": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180,
+              "example": 30.3146,
+              "format": "double"
+            }
+          },
+          "required": [
+            "latitude",
+            "longitude"
+          ]
+        },
+        "end_point": {
+          "type": "object",
+          "description": "Географические координаты WGS 84.",
+          "properties": {
+            "latitude": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90,
+              "example": 59.9398,
+              "format": "double"
+            },
+            "longitude": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180,
+              "example": 30.3146,
+              "format": "double"
+            }
+          },
+          "required": [
+            "latitude",
+            "longitude"
+          ]
+        },
+        "price": {
+          "type": "integer",
+          "minimum": 0,
+          "example": 1450,
+          "description": "Стоимость поездки в целых рублях. Это учебное упрощение: копейки не используются.",
+          "format": "int64"
+        }
+      },
+      "required": [
+        "user_id",
+        "driver_id",
+        "start_point",
+        "end_point",
+        "price"
+      ]
+    }
+settings: {}
+examples: ./.resources/Создать поездку.resources/examples
+order: 1000

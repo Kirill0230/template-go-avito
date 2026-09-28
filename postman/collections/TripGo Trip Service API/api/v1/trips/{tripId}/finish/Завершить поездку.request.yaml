@@ -1,0 +1,30 @@
+$kind: http-request
+description: Переводит активную поездку в статус completed.
+url: "{{baseUrl}}/api/v1/trips/:tripId/finish"
+method: POST
+headers:
+  Accept: application/json
+pathVariables:
+  - key: tripId
+    value: 44db80c4-f466-06b0-0895-0b43e2c1c46c
+    disabled: false
+    description: UUID поездки
+    $type: |-
+      {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "value"
+        ]
+      }
+body:
+  type: text
+  content: ""
+settings: {}
+examples: ./.resources/Завершить поездку.resources/examples
+order: 1000

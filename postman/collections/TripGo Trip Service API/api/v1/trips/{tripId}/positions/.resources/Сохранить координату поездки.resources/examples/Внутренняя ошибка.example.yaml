@@ -1,0 +1,70 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/api/v1/trips/:tripId/positions"
+  method: POST
+  headers:
+    Content-Type: application/json
+    Accept: application/problem+json
+  pathVariables:
+    - key: tripId
+      value: 44db80c4-f466-06b0-0895-0b43e2c1c46c
+      disabled: false
+      description: UUID поездки
+  body:
+    type: json
+    content: |-
+      {
+        "coordinates": {
+          "latitude": 59.9343,
+          "longitude": 30.3351
+        },
+        "recorded_at": "2026-09-01T10:05:00Z"
+      }
+response:
+  statusCode: 500
+  statusText: Internal Server Error
+  headers:
+    Content-Type: application/problem+json
+  body:
+    type: json
+    content: |-
+      {
+        "type": "https://tripgo.example/problems/internal-error",
+        "title": "Internal Server Error",
+        "status": 500,
+        "detail": "Internal server error",
+        "code": "internal_error"
+      }
+    $type: |-
+      {
+        "description": "Problem Details for HTTP APIs (RFC 9457) с дополнительным полем code.",
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code"
+        ]
+      }
+order: 5000

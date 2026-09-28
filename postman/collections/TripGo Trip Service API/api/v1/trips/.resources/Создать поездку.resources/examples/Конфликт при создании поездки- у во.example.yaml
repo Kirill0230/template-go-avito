@@ -1,0 +1,78 @@
+$kind: http-example
+name: "Конфликт при создании поездки: у водителя уже есть активная поездка либо ключ идемпотентности повторно использован с другим телом запроса."
+request:
+  url: "{{baseUrl}}/api/v1/trips"
+  method: POST
+  headers:
+    - key: Idempotency-Key
+      value: 44db80c4-f466-06b0-0895-0b43e2c1c46c
+      disabled: false
+      description: Ключ идемпотентности, генерирует клиент. Повторный запрос с тем же ключом и тем же телом возвращает уже созданную поездку и 200, с тем же ключом и другим телом — 409 idempotency_conflict. Заголовок относится к заданию со звёздочкой лабораторной работы 1, в основной части можно игнорировать.
+    - key: Content-Type
+      value: application/json
+    - key: Accept
+      value: application/problem+json
+  body:
+    type: json
+    content: |-
+      {
+        "user_id": "5cb72c04-7650-45c9-a79b-bcdba0631e0c",
+        "driver_id": "8860b315-ec86-42eb-a17c-7c163d721ff5",
+        "start_point": {
+          "latitude": 59.9398,
+          "longitude": 30.3146
+        },
+        "end_point": {
+          "latitude": 59.929,
+          "longitude": 30.3626
+        },
+        "price": 1450
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/problem+json
+  body:
+    type: json
+    content: |-
+      {
+        "type": "https://tripgo.example/problems/driver-busy",
+        "title": "Driver busy",
+        "status": 409,
+        "detail": "Driver already has an active trip",
+        "code": "driver_busy"
+      }
+    $type: |-
+      {
+        "description": "Problem Details for HTTP APIs (RFC 9457) с дополнительным полем code.",
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code"
+        ]
+      }
+order: 3000

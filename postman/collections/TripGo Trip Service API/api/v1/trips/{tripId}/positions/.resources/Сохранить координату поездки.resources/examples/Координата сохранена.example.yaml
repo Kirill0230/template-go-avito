@@ -1,0 +1,100 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/api/v1/trips/:tripId/positions"
+  method: POST
+  headers:
+    Content-Type: application/json
+    Accept: application/json
+  pathVariables:
+    - key: tripId
+      value: 44db80c4-f466-06b0-0895-0b43e2c1c46c
+      disabled: false
+      description: UUID поездки
+  body:
+    type: json
+    content: |-
+      {
+        "coordinates": {
+          "latitude": 59.9343,
+          "longitude": 30.3351
+        },
+        "recorded_at": "2026-09-01T10:05:00Z"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "coordinates": {
+          "latitude": 59.9398,
+          "longitude": 30.3146
+        },
+        "recorded_at": "1967-05-06T21:51:07.934Z",
+        "id": 113,
+        "trip_id": "231439c7-2caf-79e3-35c0-4641a5fa4ff1"
+      }
+    $type: |-
+      {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "coordinates": {
+                "type": "object",
+                "description": "Географические координаты WGS 84.",
+                "properties": {
+                  "latitude": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90,
+                    "example": 59.9398,
+                    "format": "double"
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180,
+                    "example": 30.3146,
+                    "format": "double"
+                  }
+                },
+                "required": [
+                  "latitude",
+                  "longitude"
+                ]
+              },
+              "recorded_at": {
+                "type": "string",
+                "description": "Время фиксации координаты на мобильном устройстве.",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "coordinates",
+              "recorded_at"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "trip_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "id",
+              "trip_id"
+            ]
+          }
+        ]
+      }
+order: 1000
