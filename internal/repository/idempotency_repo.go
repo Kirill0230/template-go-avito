@@ -13,16 +13,19 @@ import (
 )
 
 type IdempotencyKeyRepository struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	timeout time.Duration
 }
 
-func NewIdempotencyKeyRepository(pool *pgxpool.Pool) *IdempotencyKeyRepository {
-	return &IdempotencyKeyRepository{pool: pool}
+func NewIdempotencyKeyRepository(pool *pgxpool.Pool, timeout time.Duration) *IdempotencyKeyRepository {
+	return &IdempotencyKeyRepository{pool: pool, timeout: timeout}
 }
 
 const idempotencyKeyTTL = 24 * time.Hour
 
 func (r *IdempotencyKeyRepository) Claim(ctx context.Context, key uuid.UUID, tripID uuid.UUID) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
 	expiredBefore := time.Now().Add(-idempotencyKeyTTL)
 	query, args, err := psql.
 		Insert("idempotency_keys").
@@ -50,6 +53,8 @@ func (r *IdempotencyKeyRepository) Claim(ctx context.Context, key uuid.UUID, tri
 }
 
 func (r *IdempotencyKeyRepository) GetTripID(ctx context.Context, key uuid.UUID) (uuid.UUID, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
 	query, args, err := psql.
 		Select("trip_id").
 		From("idempotency_keys").

@@ -22,8 +22,12 @@ type Config struct {
 }
 
 type HTTPConfig struct {
-	Addr            string
-	ShutdownTimeout time.Duration
+	Addr              string
+	ShutdownTimeout   time.Duration
+	ReadTimeout       time.Duration
+	ReadHeaderTimeout time.Duration
+	WriteTimeout      time.Duration
+	IdleTimeout       time.Duration
 }
 
 func Load() (Config, error) {
@@ -64,6 +68,16 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	if cfg.DatabaseMaxConns <= 0 {
+		return Config{}, fmt.Errorf("DATABASE_MAX_CONNS must be greater than zero")
+	}
+	if cfg.DatabaseMinConns < 0 {
+		return Config{}, fmt.Errorf("DATABASE_MIN_CONNS must not be negative")
+	}
+	if cfg.DatabaseMinConns > cfg.DatabaseMaxConns {
+		return Config{}, fmt.Errorf("DATABASE_MIN_CONNS must not exceed DATABASE_MAX_CONNS")
+	}
+
 	cfg.DatabaseMaxConnLifetime, err = requireDuration("DATABASE_MAX_CONN_LIFETIME")
 	if err != nil {
 		return Config{}, err
@@ -75,6 +89,26 @@ func Load() (Config, error) {
 	}
 
 	cfg.DatabaseQueryTimeout, err = requireDuration("DATABASE_QUERY_TIMEOUT")
+	if err != nil {
+		return Config{}, err
+	}
+
+	cfg.HTTP.ReadTimeout, err = requireDuration("HTTP_READ_TIMEOUT")
+	if err != nil {
+		return Config{}, err
+	}
+
+	cfg.HTTP.ReadHeaderTimeout, err = requireDuration("HTTP_READ_HEADER_TIMEOUT")
+	if err != nil {
+		return Config{}, err
+	}
+
+	cfg.HTTP.WriteTimeout, err = requireDuration("HTTP_WRITE_TIMEOUT")
+	if err != nil {
+		return Config{}, err
+	}
+
+	cfg.HTTP.IdleTimeout, err = requireDuration("HTTP_IDLE_TIMEOUT")
 	if err != nil {
 		return Config{}, err
 	}
@@ -113,6 +147,9 @@ func requireDuration(key string) (time.Duration, error) {
 	d, err := time.ParseDuration(v)
 	if err != nil {
 		return 0, fmt.Errorf("%s must be a valid duration: %w", key, err)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("%s must be greater than zero", key)
 	}
 
 	return d, nil

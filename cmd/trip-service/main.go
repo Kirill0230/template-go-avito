@@ -43,18 +43,17 @@ func run() error {
 	}
 	defer pool.Close()
 
-	tripRepo := repository.NewTripRepository(pool)
-	tripStatusHistoryRepo := repository.NewTripStatusHistoryRepository(pool)
-	idempotencyRepo := repository.NewIdempotencyKeyRepository(pool)
+	tripRepo := repository.NewTripRepository(pool, cfg.DatabaseQueryTimeout)
+	tripStatusHistoryRepo := repository.NewTripStatusHistoryRepository(pool, cfg.DatabaseQueryTimeout)
+	idempotencyRepo := repository.NewIdempotencyKeyRepository(pool, cfg.DatabaseQueryTimeout)
 
-	tx := repository.NewTxManagerImpl(pool)
+	tx := repository.NewTxManagerImpl(pool, cfg.DatabaseQueryTimeout)
 	tripService := service.NewTripService(tripRepo, tripStatusHistoryRepo, idempotencyRepo, tx)
 
-	server := handler.NewServer(pool, tripService)
+	server := handler.NewServer(pool, tripService, cfg.DatabaseQueryTimeout)
 
 	log.Printf("starting on %s", cfg.HTTP.Addr)
-	server.NewRouter(ctx, cfg.HTTP)
-	return nil
+	return server.NewRouter(ctx, cfg.HTTP)
 }
 
 func newPool(ctx context.Context, cfg config.Config) (*pgxpool.Pool, error) {

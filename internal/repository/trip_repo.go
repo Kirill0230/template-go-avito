@@ -16,12 +16,14 @@ import (
 )
 
 type TripRepository struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	timeout time.Duration
 }
 
-func NewTripRepository(pool *pgxpool.Pool) *TripRepository {
+func NewTripRepository(pool *pgxpool.Pool, timeout time.Duration) *TripRepository {
 	return &TripRepository{
-		pool: pool,
+		pool:    pool,
+		timeout: timeout,
 	}
 }
 
@@ -54,6 +56,8 @@ type tripRow struct {
 }
 
 func (r *TripRepository) GetTrip(ctx context.Context, id uuid.UUID) (*domain.Trip, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
 	query, args, err := psql.Select(tripColumns...).From("trips").Where(sq.Eq{"id": id}).ToSql()
 
 	if err != nil {
@@ -77,6 +81,8 @@ func (r *TripRepository) GetTrip(ctx context.Context, id uuid.UUID) (*domain.Tri
 }
 
 func (r *TripRepository) AddTrip(ctx context.Context, trip domain.Trip) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
 	query, args, err := psql.Insert("trips").Columns(tripColumns...).Values(
 		trip.Id,
 		trip.UserId,
@@ -107,6 +113,8 @@ func (r *TripRepository) AddTrip(ctx context.Context, trip domain.Trip) error {
 }
 
 func (r *TripRepository) FinishTrip(ctx context.Context, id uuid.UUID, finishedAt time.Time) (*domain.Trip, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
 	query, args, err := psql.
 		Update("trips").
 		Set("status", string(domain.Completed)).

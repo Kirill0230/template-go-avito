@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Kirill0230/template-go-avito/internal/domain"
 	api "github.com/Kirill0230/template-go-avito/internal/generated"
@@ -18,12 +20,13 @@ import (
 )
 
 type Server struct {
-	pool        *pgxpool.Pool
-	tripService *service.TripService
+	pool         *pgxpool.Pool
+	tripService  *service.TripService
+	queryTimeout time.Duration
 }
 
-func NewServer(pool *pgxpool.Pool, tripService *service.TripService) *Server {
-	return &Server{pool: pool, tripService: tripService}
+func NewServer(pool *pgxpool.Pool, tripService *service.TripService, queryTimeout time.Duration) *Server {
+	return &Server{pool: pool, tripService: tripService, queryTimeout: queryTimeout}
 }
 
 func (s *Server) CreateTrip(w http.ResponseWriter, r *http.Request, params api.CreateTripParams) {
@@ -136,23 +139,16 @@ func (s *Server) Health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Ready(w http.ResponseWriter, r *http.Request) {
-	err := s.pool.Ping(r.Context())
+	ctx, cancel := context.WithTimeout(r.Context(), s.queryTimeout)
+	defer cancel()
+
+	err := s.pool.Ping(ctx)
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, api.HealthResponse{Status: api.Unavailable})
 		return
 	}
 
 	writeJSON(w, http.StatusOK, api.HealthResponse{Status: api.Ok})
-}
-
-func (s Server) ListTripPositions(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s Server) CreateTripPosition(w http.ResponseWriter, r *http.Request, tripId api.TripId) {
-	//TODO implement me
-	panic("implement me")
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {

@@ -21,6 +21,10 @@ make run
 | `DATABASE_MAX_CONN_LIFETIME` | `30m` |
 | `DATABASE_CONNECT_TIMEOUT` | `5s` |
 | `DATABASE_QUERY_TIMEOUT` | `3s` |
+| `HTTP_READ_TIMEOUT` | `10s` |
+| `HTTP_READ_HEADER_TIMEOUT` | `5s` |
+| `HTTP_WRITE_TIMEOUT` | `15s` |
+| `HTTP_IDLE_TIMEOUT` | `60s` |
 
 Все обязательны, пример — `.env.example`.
 

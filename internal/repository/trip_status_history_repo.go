@@ -12,14 +12,17 @@ import (
 )
 
 type TripStatusHistoryRepository struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	timeout time.Duration
 }
 
-func NewTripStatusHistoryRepository(pool *pgxpool.Pool) *TripStatusHistoryRepository {
-	return &TripStatusHistoryRepository{pool: pool}
+func NewTripStatusHistoryRepository(pool *pgxpool.Pool, timeout time.Duration) *TripStatusHistoryRepository {
+	return &TripStatusHistoryRepository{pool: pool, timeout: timeout}
 }
 
 func (r *TripStatusHistoryRepository) Add(ctx context.Context, tripID uuid.UUID, from domain.Status, to domain.Status, changedAt time.Time) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
 	var fromStatus *string
 	if from != "" {
 		s := string(from)

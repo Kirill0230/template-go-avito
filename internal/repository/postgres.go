@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
@@ -33,11 +34,12 @@ func executor(ctx context.Context, pool *pgxpool.Pool) DBTX {
 }
 
 type TxManagerImpl struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	timeout time.Duration
 }
 
-func NewTxManagerImpl(pool *pgxpool.Pool) *TxManagerImpl {
-	return &TxManagerImpl{pool: pool}
+func NewTxManagerImpl(pool *pgxpool.Pool, timeout time.Duration) *TxManagerImpl {
+	return &TxManagerImpl{pool: pool, timeout: timeout}
 }
 
 func (t *TxManagerImpl) Do(ctx context.Context, fn func(ctx context.Context) error) error {
@@ -46,13 +48,17 @@ func (t *TxManagerImpl) Do(ctx context.Context, fn func(ctx context.Context) err
 		return fn(ctx)
 	}
 
-	tx, err := t.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	beginCtx, cancel := context.WithTimeout(ctx, t.timeout)
+	tx, err := t.pool.BeginTx(beginCtx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	cancel()
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
 
 	defer func() {
-		_ = tx.Rollback(context.WithoutCancel(ctx))
+		rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), t.timeout)
+		defer cancel()
+		_ = tx.Rollback(rollbackCtx)
 	}()
 
 	txCtx := context.WithValue(ctx, txKey{}, tx)
@@ -61,7 +67,9 @@ func (t *TxManagerImpl) Do(ctx context.Context, fn func(ctx context.Context) err
 		return err
 	}
 
-	err = tx.Commit(ctx)
+	commitCtx, cancel := context.WithTimeout(ctx, t.timeout)
+	defer cancel()
+	err = tx.Commit(commitCtx)
 	if err != nil {
 		return fmt.Errorf("commit tx: %w", err)
 	}

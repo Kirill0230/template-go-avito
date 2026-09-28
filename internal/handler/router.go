@@ -2,16 +2,14 @@ package handler
 
 import (
 	"context"
-	"errors"
-	"log"
+	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/Kirill0230/template-go-avito/internal/config"
 	api "github.com/Kirill0230/template-go-avito/internal/generated"
 )
 
-func (s *Server) NewRouter(ctx context.Context, cfg config.HTTPConfig) {
+func (s *Server) NewRouter(ctx context.Context, cfg config.HTTPConfig) error {
 	router := api.HandlerWithOptions(s, api.ChiServerOptions{
 		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			writeError(w, r, http.StatusBadRequest, "invalid_request", err.Error())
@@ -21,25 +19,30 @@ func (s *Server) NewRouter(ctx context.Context, cfg config.HTTPConfig) {
 	srv := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           router,
-		ReadTimeout:       10 * time.Second,
-		ReadHeaderTimeout: 5 * time.Second,
-		IdleTimeout:       60 * time.Second,
-		WriteTimeout:      15 * time.Second,
+		ReadTimeout:       cfg.ReadTimeout,
+		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+		IdleTimeout:       cfg.IdleTimeout,
+		WriteTimeout:      cfg.WriteTimeout,
 	}
 
+	serverErr := make(chan error, 1)
 	go func() {
-		err := srv.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatal(err)
-		}
+		serverErr <- srv.ListenAndServe()
 	}()
 
-	<-ctx.Done()
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	select {
+	case err := <-serverErr:
+		return fmt.Errorf("http server: %w", err)
+	case <-ctx.Done():
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), cfg.ShutdownTimeout)
 	defer cancel()
 
 	err := srv.Shutdown(shutdownCtx)
 	if err != nil {
-		log.Println("shutdown error:", err)
+		_ = srv.Close()
+		return fmt.Errorf("shutdown timeout exceeded, forced close: %w", err)
 	}
+	return nil
 }
