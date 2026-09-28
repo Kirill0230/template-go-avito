@@ -1,45 +1,51 @@
-# TripGo — репозиторий для лабораторных работ
-
-Заготовка курса «Разработка микросервисов на Go». Здесь вы делаете все пять
-работ: каждая следующая продолжает предыдущую, переписывать сервис с нуля не
-нужно.
-
-## Что делать сразу
-
-1. **Fork** этого репозитория к себе. Форк нужен, чтобы преподаватели видели
-   список всех работ курса одной страницей.
-2. Заведите модуль:
+## Запуск
 
 ```bash
-git clone git@github.com:<ваш-логин>/<ваш-репозиторий>.git
-cd <ваш-репозиторий>
-go mod init github.com/<ваш-логин>/<ваш-репозиторий>
+tripgoctl cluster start
+tripgoctl environment start
+tripgoctl connect
+make migrate
+make run
 ```
 
-Путь модуля потом не меняется — иначе придётся править все импорты. Проще всего
-взять адрес своего репозитория, каким бы он ни был.
+## Переменные окружения
 
-Дальше — [`homework/docs/getting-started.md`](https://github.com/course-go-autumn-2026/course/blob/main/homework/docs/getting-started.md)
-в репозитории курса: инструменты, окружение, миграции, вид сданной работы.
-
-## Где что лежит
-
-| Что | Где |
+| Переменная | Пример |
 |---|---|
-| Задания, документация, контракты | [`course-go-autumn-2026/course`](https://github.com/course-go-autumn-2026/course) |
-| Слайды и записи лекций | [`lections/`](https://github.com/course-go-autumn-2026/course/tree/main/lections) |
-| Как оценивают, дедлайны, порядок сдачи | [`homework/docs/grading.md`](https://github.com/course-go-autumn-2026/course/blob/main/homework/docs/grading.md) |
-| Локальное окружение и утилита `tripgoctl` | [`course-go-autumn-2026/course-infra`](https://github.com/course-go-autumn-2026/course-infra) |
+| `HTTP_ADDR` | `:8080` |
+| `LOG_LEVEL` | `info` |
+| `SHUTDOWN_TIMEOUT` | `10s` |
+| `DATABASE_URL` | `postgres://user:password@localhost:5432/db?sslmode=disable` |
+| `DATABASE_MAX_CONNS` | `10` |
+| `DATABASE_MIN_CONNS` | `2` |
+| `DATABASE_MAX_CONN_LIFETIME` | `30m` |
+| `DATABASE_CONNECT_TIMEOUT` | `5s` |
+| `DATABASE_QUERY_TIMEOUT` | `3s` |
+| `HTTP_READ_TIMEOUT` | `10s` |
+| `HTTP_READ_HEADER_TIMEOUT` | `5s` |
+| `HTTP_WRITE_TIMEOUT` | `15s` |
+| `HTTP_IDLE_TIMEOUT` | `60s` |
 
-Задания появляются по мере курса, каждое — после своей пары лекций.
+Все обязательны, пример — `.env.example`.
 
-## Как сдавать
 
-Ветка `homework/NN` от `main`, pull request в `main` своего форка, ссылка
-ментору до дедлайна. Подробно — в `grading.md` репозитория курса.
+## Решения
 
-## Чужие работы
+**Уровень изоляции — READ COMMITTED.**  
+завершение — один UPDATE ... WHERE status = 'active' поэтому более строгий уровень изоляции не требуется
 
-Форки видны всем, включая ваши. Смотреть чужие решения, пока идёт курс, —
-плохая идея: одинаковый код виден сразу, а разбираться на защите придётся
-самому.
+**Менеджер транзакций.** `Do` открывает транзакцию и кладёт её в `context`; репозитории берут её оттуда, а без неё работают через пул.
+
+**Одна активная поездка на водителя** — частичный уникальный индекс `ON trips (driver_id) WHERE status = 'active'`.
+
+**Идемпотентность** — таблица `idempotency_keys` (ключ → поездка), ключ занимается через `INSERT ... ON CONFLICT`. Ключ живёт **24 часа**.
+
+## Docker
+
+```bash
+docker build -f deploy/Dockerfile -t trip-service .
+```
+
+Размер образа: **17.9 МБ**.
+```
+
