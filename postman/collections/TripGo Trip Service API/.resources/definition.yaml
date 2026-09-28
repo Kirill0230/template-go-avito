@@ -1,4 +1,0 @@
-$kind: collection
-description: Кумулятивный контракт Trip Service начиная с лабораторной работы 2.
-variables:
-  baseUrl: http://localhost:8080

@@ -19,6 +19,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const maxRequestBodyBytes = 1 << 20
+
 type Server struct {
 	pool         *pgxpool.Pool
 	tripService  *service.TripService
@@ -30,19 +32,17 @@ func NewServer(pool *pgxpool.Pool, tripService *service.TripService, queryTimeou
 }
 
 func (s *Server) CreateTrip(w http.ResponseWriter, r *http.Request, params api.CreateTripParams) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 	raw, err := io.ReadAll(r.Body)
 	if err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", err.Error())
 		return
 	}
 
-	var fields map[string]json.RawMessage
-	_ = json.Unmarshal(raw, &fields)
-	for _, name := range []string{"user_id", "driver_id", "start_point", "end_point", "price"} {
-		if _, ok := fields[name]; !ok {
-			writeError(w, r, http.StatusBadRequest, "invalid_request", name+" is required")
-			return
-		}
+	err = checkRequired(raw)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", err.Error())
+		return
 	}
 
 	var body api.TripData
@@ -232,6 +232,32 @@ func validatePoint(name string, p api.Coordinates) error {
 	}
 	if p.Longitude < -180 || p.Longitude > 180 {
 		return fmt.Errorf("%s.longitude out of range", name)
+	}
+	return nil
+}
+
+func checkRequired(raw []byte) error {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil || fields == nil {
+		return errors.New("request body must be a JSON object")
+	}
+	for _, name := range []string{"user_id", "driver_id", "start_point", "end_point", "price"} {
+		v, ok := fields[name]
+		if !ok || string(v) == "null" {
+			return fmt.Errorf("%s is required", name)
+		}
+	}
+	for _, p := range []string{"start_point", "end_point"} {
+		var point map[string]json.RawMessage
+		if err := json.Unmarshal(fields[p], &point); err != nil || point == nil {
+			return fmt.Errorf("%s must be an object", p)
+		}
+		for _, c := range []string{"latitude", "longitude"} {
+			v, ok := point[c]
+			if !ok || string(v) == "null" {
+				return fmt.Errorf("%s.%s is required", p, c)
+			}
+		}
 	}
 	return nil
 }

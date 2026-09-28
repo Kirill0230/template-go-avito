@@ -31,7 +31,8 @@ make run
 
 ## Решения
 
-**Уровень изоляции — READ COMMITTED.**
+**Уровень изоляции — READ COMMITTED.**  
+завершение — один UPDATE ... WHERE status = 'active' поэтому более строгий уровень изоляции не требуется
 
 **Менеджер транзакций.** `Do` открывает транзакцию и кладёт её в `context`; репозитории берут её оттуда, а без неё работают через пул.
 
@@ -42,7 +43,9 @@ make run
 ## Docker
 
 ```bash
-docker build -t trip-service .
+docker build -f deploy/Dockerfile -t trip-service .
+```
+
 Размер образа: **17.9 МБ**.
 ```
 

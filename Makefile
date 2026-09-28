@@ -1,14 +1,15 @@
+-include .env.example
 -include .env
 export
 
 generate:
-	go get -tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
-
 	go tool oapi-codegen \
 	  -generate types,chi-server \
 	  -package api \
+	  -include-operation-ids createTrip,getTrip,finishTrip,health,ready \
 	  -o internal/generated/api.gen.go \
 	  contracts/openapi/trip-service.openapi.yaml
+
 
 migrate:
 	go tool goose -dir ./migrations postgres "$(DATABASE_URL)" up

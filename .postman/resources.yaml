@@ -1,9 +1,0 @@
-workspace:
-  id: f0278779-f069-4203-8d8e-360c0544cfa9
-localResources:
-  specs:
-    - ../contracts/openapi/trip-service.openapi.yaml
-    - ../postman/specs/TripGo Trip Service API/trip-service.openapi.yaml
-resourceNameMappings:
-  specs:
-    - ../postman/specs/TripGo Trip Service API/trip-service.openapi.yaml: TripGo Trip Service API
