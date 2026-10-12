@@ -1,0 +1,9 @@
+.git
+.idea
+.claude
+.env
+.tripgo
+bin
+postman
+.postman
+**/*_test.go
