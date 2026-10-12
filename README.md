@@ -47,5 +47,9 @@ docker build -f deploy/Dockerfile -t trip-service .
 ```
 
 Размер образа: **17.9 МБ**.
-```
 
+Запуск тестов (с детектором гонок):
+
+```bash
+make test
+```

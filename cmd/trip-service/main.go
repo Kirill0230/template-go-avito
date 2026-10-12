@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/Kirill0230/template-go-avito/internal/config"
 	"github.com/Kirill0230/template-go-avito/internal/handler"
@@ -30,6 +31,14 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
+
+	go func() {
+		<-ctx.Done()
+		time.AfterFunc(cfg.HTTP.ShutdownTimeout, func() {
+			slog.Error("shutdown timeout exceeded, forcing exit")
+			os.Exit(1)
+		})
+	}()
 
 	var level slog.Level
 	if err := level.UnmarshalText([]byte(cfg.LogLevel)); err != nil {

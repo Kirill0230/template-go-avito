@@ -25,3 +25,6 @@ run:
 
 build:
 	go build -o bin/trip-service ./cmd/trip-service
+
+test:
+	go test -race -count=1 ./...

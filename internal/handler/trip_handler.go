@@ -241,6 +241,15 @@ func checkRequired(raw []byte) error {
 	if err := json.Unmarshal(raw, &fields); err != nil || fields == nil {
 		return errors.New("request body must be a JSON object")
 	}
+
+	for name := range fields {
+		switch name {
+		case "user_id", "driver_id", "start_point", "end_point", "price":
+		default:
+			return fmt.Errorf("unknown field %q", name)
+		}
+	}
+
 	for _, name := range []string{"user_id", "driver_id", "start_point", "end_point", "price"} {
 		v, ok := fields[name]
 		if !ok || string(v) == "null" {
@@ -252,6 +261,13 @@ func checkRequired(raw []byte) error {
 		if err := json.Unmarshal(fields[p], &point); err != nil || point == nil {
 			return fmt.Errorf("%s must be an object", p)
 		}
+
+		for name := range point {
+			if name != "latitude" && name != "longitude" {
+				return fmt.Errorf("unknown field %q", p+"."+name)
+			}
+		}
+
 		for _, c := range []string{"latitude", "longitude"} {
 			v, ok := point[c]
 			if !ok || string(v) == "null" {
