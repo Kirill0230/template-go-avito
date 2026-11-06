@@ -1,3 +1,25 @@
+# Trip Service
+
+Сервис создания, получения и завершения поездок. В лабораторной работе сервис разделён на слои, покрыт тестами и подключён к OpenTelemetry.
+
+## Архитектура
+
+```text
+HTTP → usecase → domain
+          ↑
+     repository
+```
+
+- `cmd/trip-service` загружает конфигурацию и запускает приложение;
+- `internal/container` создаёт и связывает зависимости;
+- `internal/http` содержит handlers, middleware и преобразование ошибок в HTTP;
+- `internal/usecase` реализует сценарии работы с поездками;
+- `internal/domain` содержит бизнес-правила и переходы статусов;
+- `internal/repository` реализует хранение данных в PostgreSQL;
+- `internal/infra` инициализирует PostgreSQL, транзакции и OpenTelemetry.
+
+Интерфейсы объявлены на стороне потребителя в `contract.go`. Домен не зависит от HTTP и PostgreSQL.
+
 ## Запуск
 
 ```bash
@@ -8,48 +30,60 @@ make migrate
 make run
 ```
 
-## Переменные окружения
+Переменные окружения описаны в `.env.example`. Актуальные адреса окружения выводит `tripgoctl connect`.
 
-| Переменная | Пример |
-|---|---|
-| `HTTP_ADDR` | `:8080` |
-| `LOG_LEVEL` | `info` |
-| `SHUTDOWN_TIMEOUT` | `10s` |
-| `DATABASE_URL` | `postgres://user:password@localhost:5432/db?sslmode=disable` |
-| `DATABASE_MAX_CONNS` | `10` |
-| `DATABASE_MIN_CONNS` | `2` |
-| `DATABASE_MAX_CONN_LIFETIME` | `30m` |
-| `DATABASE_CONNECT_TIMEOUT` | `5s` |
-| `DATABASE_QUERY_TIMEOUT` | `3s` |
-| `HTTP_READ_TIMEOUT` | `10s` |
-| `HTTP_READ_HEADER_TIMEOUT` | `5s` |
-| `HTTP_WRITE_TIMEOUT` | `15s` |
-| `HTTP_IDLE_TIMEOUT` | `60s` |
-
-Все обязательны, пример — `.env.example`.
-
-
-## Решения
-
-**Уровень изоляции — READ COMMITTED.**  
-завершение — один UPDATE ... WHERE status = 'active' поэтому более строгий уровень изоляции не требуется
-
-**Менеджер транзакций.** `Do` открывает транзакцию и кладёт её в `context`; репозитории берут её оттуда, а без неё работают через пул.
-
-**Одна активная поездка на водителя** — частичный уникальный индекс `ON trips (driver_id) WHERE status = 'active'`.
-
-**Идемпотентность** — таблица `idempotency_keys` (ключ → поездка), ключ занимается через `INSERT ... ON CONFLICT`. Ключ живёт **24 часа**.
-
-## Docker
+## Проверка
 
 ```bash
-docker build -f deploy/Dockerfile -t trip-service .
-```
-
-Размер образа: **17.9 МБ**.
-
-Запуск тестов (с детектором гонок):
-
-```bash
+make lint
 make test
+make test-integration
 ```
+
+Unit-тесты запускаются с race detector. Интеграционные тесты работают с PostgreSQL и проверяют сохранение данных и откат транзакции.
+
+## Observability
+
+Сервис отправляет телеметрию по OTLP:
+
+- JSON-логи `slog` содержат `trace_id` и `span_id`;
+- HTTP и PostgreSQL запросы представлены отдельными spans;
+- собираются HTTP и DB метрики;
+- бизнес-метрики считают созданные и завершённые поездки.
+
+### Логи
+
+![Структурные JSON-логи](docs/images/structured-logs.png)
+
+### Трейс в Jaeger
+
+![Трейс завершения поездки](docs/images/jaeger-trace.png)
+
+### Метрики в Grafana
+
+Созданные поездки:
+
+![Метрика созданных поездок](docs/images/metrics-trips-created.png)
+
+Завершённые поездки:
+
+![Метрика завершённых поездок](docs/images/metrics-trips-completed.png)
+
+HTTP-запросы:
+
+![HTTP-метрики](docs/images/metrics-http.png)
+
+Операции PostgreSQL:
+
+![Метрики PostgreSQL](docs/images/metrics-database.png)
+
+## Мутационное тестирование
+
+Пакеты `internal/domain` и `internal/usecase` проверены с помощью Gremlins.
+
+| Запуск | Killed | Lived | Not covered | Покрытие мутаций |
+|---|---:|---:|---:|---:|
+| До дополнительного теста | 17 | 0 | 5 | 77,27% |
+| После дополнительного теста | 22 | 0 | 0 | 100% |
+
+После добавления теста повторного идемпотентного запроса все найденные мутации уничтожаются тестами. Отчёты сохранены в `docs/mutation`.
