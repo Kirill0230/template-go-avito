@@ -144,6 +144,33 @@ func TestCreateTripDriverBusy(t *testing.T) {
 	}
 }
 
+func TestCreateTripInvalidDomainData(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	service := createusecase.NewService(
+		NewMocktripRepository(ctrl),
+		NewMocktripStatusHistoryRepository(ctrl),
+		NewMockidempotencyKeyRepository(ctrl),
+		NewMocktxManager(ctrl),
+		NewMocktripMetrics(ctrl),
+	)
+
+	invalidTrip := testCreateTrip()
+	invalidTrip.Price = -1
+
+	result, created, err := service.CreateTrip(context.Background(), invalidTrip, nil)
+
+	if !errors.Is(err, domaintrip.ErrInvalidPrice) {
+		t.Fatalf("CreateTrip() error = %v, want %v", err, domaintrip.ErrInvalidPrice)
+	}
+	if result != nil {
+		t.Fatalf("CreateTrip() result = %#v, want nil", result)
+	}
+	if created {
+		t.Fatal("CreateTrip() created = true, want false")
+	}
+}
+
 func TestCreateTripIdempotentReplay(t *testing.T) {
 	ctrl := gomock.NewController(t)
 

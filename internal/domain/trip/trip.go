@@ -1,6 +1,8 @@
 package trip
 
 import (
+	"fmt"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,18 +26,40 @@ type Trip struct {
 	lastPositionAt *time.Time
 }
 
-func CreateTrip(id, userId, driverId uuid.UUID, price int64, startPoint, endPoint Point, at time.Time) *Trip {
+func CreateTrip(id, userID, driverID uuid.UUID, price int64, startPoint, endPoint Point, at time.Time) (*Trip, error) {
+	if price < 0 {
+		return nil, ErrInvalidPrice
+	}
+
+	if err := validatePoint("start point", startPoint); err != nil {
+		return nil, err
+	}
+	if err := validatePoint("end point", endPoint); err != nil {
+		return nil, err
+	}
+
 	return &Trip{
 		id:             id,
-		userId:         userId,
-		driverId:       driverId,
+		userId:         userID,
+		driverId:       driverID,
 		price:          price,
 		status:         Active,
 		startPoint:     startPoint,
 		endPoint:       endPoint,
 		startedAt:      &at,
 		lastPositionAt: &at,
+	}, nil
+}
+
+func validatePoint(name string, point Point) error {
+	if math.IsNaN(point.Latitude) || point.Latitude < -90 || point.Latitude > 90 {
+		return fmt.Errorf("%w: %s latitude must be between -90 and 90", ErrInvalidCoordinates, name)
 	}
+	if math.IsNaN(point.Longitude) || point.Longitude < -180 || point.Longitude > 180 {
+		return fmt.Errorf("%w: %s longitude must be between -180 and 180", ErrInvalidCoordinates, name)
+	}
+
+	return nil
 }
 
 func (t *Trip) Id() uuid.UUID {

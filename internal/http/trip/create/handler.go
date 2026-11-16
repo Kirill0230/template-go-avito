@@ -81,7 +81,7 @@ func (h *Handler) CreateTrip(w http.ResponseWriter, r *http.Request, params api.
 
 	if createdErr != nil {
 		status, problem := domainerror.Problem(createdErr)
-		response.WriteProblem(w, r, status, problem)
+		response.WriteProblem(w, r, status, problem, createdErr)
 		return
 	}
 

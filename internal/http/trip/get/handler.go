@@ -23,7 +23,7 @@ func (h *Handler) GetTrip(w http.ResponseWriter, r *http.Request, tripId api.Tri
 	trip, err := h.usecase.GetTrip(r.Context(), tripId)
 	if err != nil {
 		status, problem := domainerror.Problem(err)
-		response.WriteProblem(w, r, status, problem)
+		response.WriteProblem(w, r, status, problem, err)
 		return
 	}
 

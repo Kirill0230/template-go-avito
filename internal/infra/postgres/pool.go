@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Kirill0230/template-go-avito/internal/config"
@@ -21,7 +20,11 @@ func NewPool(ctx context.Context, cfg config.Config) (*pgxpool.Pool, error) {
 	poolCfg.MaxConnLifetime = cfg.DatabaseMaxConnLifetime
 	poolCfg.ConnConfig.ConnectTimeout = cfg.DatabaseConnectTimeout
 
-	poolCfg.ConnConfig.Tracer = otelpgx.NewTracer()
+	dbTracer, err := newTracer()
+	if err != nil {
+		return nil, err
+	}
+	poolCfg.ConnConfig.Tracer = dbTracer
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {

@@ -34,27 +34,6 @@ func TestValidateTripData(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name: "negative price",
-			change: func(data *api.TripData) {
-				data.Price = -1
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid latitude",
-			change: func(data *api.TripData) {
-				data.StartPoint.Latitude = 91
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid longitude",
-			change: func(data *api.TripData) {
-				data.EndPoint.Longitude = 181
-			},
-			wantErr: true,
-		},
 	}
 
 	for _, tt := range tests {

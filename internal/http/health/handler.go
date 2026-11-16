@@ -2,6 +2,7 @@ package health
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -28,6 +29,7 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 
 	err := h.db.Ping(ctx)
 	if err != nil {
+		response.RecordError(w, fmt.Errorf("ping database: %w", err))
 		response.WriteJSON(w, http.StatusServiceUnavailable, api.HealthResponse{Status: api.Unavailable})
 		return
 	}

@@ -9,12 +9,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/Kirill0230/template-go-avito/internal/infra/postgres"
 	"github.com/Kirill0230/template-go-avito/internal/infra/postgres/transaction"
 )
 
 func (r *IdempotencyKeyRepository) Claim(ctx context.Context, key, tripID uuid.UUID) (bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
+	ctx = postgres.WithDBCollection(ctx, "idempotency_keys")
 	expiredBefore := time.Now().Add(-idempotencyKeyTTL)
 	query, args, err := r.psql.
 		Insert("idempotency_keys").

@@ -19,6 +19,20 @@ func NewHTTPMetrics(meter metric.Meter) (*HTTPMetrics, error) {
 	requestDuration, err := meter.Float64Histogram(
 		"http.server.request.duration",
 		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(
+			0.001,
+			0.005,
+			0.01,
+			0.025,
+			0.05,
+			0.1,
+			0.25,
+			0.5,
+			1,
+			2.5,
+			5,
+			10,
+		),
 		metric.WithDescription(
 			"HTTP request duration",
 		),
@@ -50,18 +64,9 @@ func Metrics(metrics *HTTPMetrics) func(http.Handler) http.Handler {
 			func(w http.ResponseWriter, r *http.Request) {
 				startedAt := time.Now()
 
-				route := chi.RouteContext(
-					r.Context(),
-				).RoutePattern()
-
 				methodAttribute := attribute.String(
 					"http.request.method",
 					r.Method,
-				)
-
-				routeAttribute := attribute.String(
-					"http.route",
-					route,
 				)
 
 				metrics.activeRequests.Add(
@@ -69,7 +74,6 @@ func Metrics(metrics *HTTPMetrics) func(http.Handler) http.Handler {
 					1,
 					metric.WithAttributes(
 						methodAttribute,
-						routeAttribute,
 					),
 				)
 
@@ -78,7 +82,6 @@ func Metrics(metrics *HTTPMetrics) func(http.Handler) http.Handler {
 					-1,
 					metric.WithAttributes(
 						methodAttribute,
-						routeAttribute,
 					),
 				)
 
@@ -88,6 +91,12 @@ func Metrics(metrics *HTTPMetrics) func(http.Handler) http.Handler {
 				}
 
 				next.ServeHTTP(writer, r)
+
+				route := chi.RouteContext(r.Context()).RoutePattern()
+				if route == "" {
+					route = "unmatched"
+				}
+				routeAttribute := attribute.String("http.route", route)
 
 				metrics.requestDuration.Record(
 					r.Context(),

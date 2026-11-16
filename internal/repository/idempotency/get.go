@@ -7,12 +7,14 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 
+	"github.com/Kirill0230/template-go-avito/internal/infra/postgres"
 	"github.com/Kirill0230/template-go-avito/internal/infra/postgres/transaction"
 )
 
 func (r *IdempotencyKeyRepository) Get(ctx context.Context, key uuid.UUID) (uuid.UUID, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
+	ctx = postgres.WithDBCollection(ctx, "idempotency_keys")
 	query, args, err := r.psql.
 		Select("trip_id").
 		From("idempotency_keys").

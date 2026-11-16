@@ -14,6 +14,17 @@ type responseWriter struct {
 
 	statusCode  int
 	wroteHeader bool
+	internalErr error
+}
+
+func (w *responseWriter) SetError(err error) {
+	if w.internalErr == nil {
+		w.internalErr = err
+	}
+
+	if recorder, ok := w.ResponseWriter.(interface{ SetError(error) }); ok {
+		recorder.SetError(err)
+	}
 }
 
 func (w *responseWriter) WriteHeader(statusCode int) {
@@ -73,7 +84,11 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 				)
 			}
 
-			if writer.statusCode >= http.StatusInternalServerError {
+			if writer.internalErr != nil {
+				attributes = append(attributes, slog.Any("error", writer.internalErr))
+			}
+
+			if writer.statusCode >= http.StatusInternalServerError || writer.internalErr != nil {
 				logger.ErrorContext(
 					r.Context(),
 					"request handled",

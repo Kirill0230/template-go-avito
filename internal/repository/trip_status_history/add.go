@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/Kirill0230/template-go-avito/internal/infra/postgres"
 	"github.com/Kirill0230/template-go-avito/internal/infra/postgres/transaction"
 	"github.com/Kirill0230/template-go-avito/internal/model"
 )
@@ -14,6 +15,7 @@ import (
 func (r *TripStatusHistoryRepository) Add(ctx context.Context, tripID uuid.UUID, from, to model.Status, changedAt time.Time) error {
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
+	ctx = postgres.WithDBCollection(ctx, "trip_status_history")
 	var fromStatus *string
 	if from != "" {
 		s := string(from)

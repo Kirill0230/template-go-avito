@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -35,5 +36,8 @@ func Tracing(next http.Handler) http.Handler {
 	return otelhttp.NewHandler(
 		handler,
 		"HTTP request",
+		// HTTP metrics are emitted by Metrics. Keeping otelhttp metrics
+		// enabled would record http.server.request.duration twice.
+		otelhttp.WithMeterProvider(metricnoop.NewMeterProvider()),
 	)
 }

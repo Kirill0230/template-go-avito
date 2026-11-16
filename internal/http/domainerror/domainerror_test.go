@@ -18,6 +18,18 @@ func TestProblem(t *testing.T) {
 		wantCode   string
 	}{
 		{
+			name:       "invalid price",
+			err:        domaintrip.ErrInvalidPrice,
+			wantStatus: http.StatusBadRequest,
+			wantCode:   "invalid_price",
+		},
+		{
+			name:       "invalid coordinates",
+			err:        domaintrip.ErrInvalidCoordinates,
+			wantStatus: http.StatusBadRequest,
+			wantCode:   "invalid_coordinates",
+		},
+		{
 			name:       "trip not found",
 			err:        domaintrip.ErrTripNotFound,
 			wantStatus: http.StatusNotFound,

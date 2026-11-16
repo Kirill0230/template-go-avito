@@ -11,6 +11,20 @@ import (
 
 func Problem(err error) (int, api.Problem) {
 	switch {
+	case errors.Is(err, domaintrip.ErrInvalidPrice):
+		return newProblem(
+			http.StatusBadRequest,
+			"invalid_price",
+			err.Error(),
+		)
+
+	case errors.Is(err, domaintrip.ErrInvalidCoordinates):
+		return newProblem(
+			http.StatusBadRequest,
+			"invalid_coordinates",
+			err.Error(),
+		)
+
 	case errors.Is(err, domaintrip.ErrTripNotFound):
 		return newProblem(
 			http.StatusNotFound,

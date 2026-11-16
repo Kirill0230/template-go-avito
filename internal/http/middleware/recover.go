@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/Kirill0230/template-go-avito/internal/http/response"
 )
 
@@ -25,9 +27,7 @@ func Recover(
 						return
 					}
 
-					logger.ErrorContext(
-						r.Context(),
-						"panic recovered",
+					attributes := []any{
 						slog.Any("panic", recovered),
 						slog.String(
 							"stack",
@@ -35,6 +35,21 @@ func Recover(
 						),
 						slog.String("method", r.Method),
 						slog.String("path", r.URL.Path),
+					}
+
+					spanContext := trace.SpanContextFromContext(r.Context())
+					if spanContext.IsValid() {
+						attributes = append(
+							attributes,
+							slog.String("trace_id", spanContext.TraceID().String()),
+							slog.String("span_id", spanContext.SpanID().String()),
+						)
+					}
+
+					logger.ErrorContext(
+						r.Context(),
+						"panic recovered",
+						attributes...,
 					)
 
 					if writer.wroteHeader {

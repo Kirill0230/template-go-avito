@@ -19,7 +19,7 @@ func main() {
 	}
 }
 
-func run() (resultErr error) {
+func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -32,18 +32,8 @@ func run() (resultErr error) {
 	if err != nil {
 		return fmt.Errorf("create container: %w", err)
 	}
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(
-			context.Background(),
-			cfg.HTTP.ShutdownTimeout,
-		)
-		defer cancel()
 
-		resultErr = errors.Join(
-			resultErr,
-			app.Shutdown(shutdownCtx),
-		)
-	}()
+	server := httpserver.NewHTTPServer(app.Handler, cfg.HTTP)
 
 	app.Logger.InfoContext(
 		ctx,
@@ -52,17 +42,43 @@ func run() (resultErr error) {
 		cfg.HTTP.Addr,
 	)
 
-	if err := httpserver.Run(
-		ctx,
-		app.Handler,
-		cfg.HTTP,
-	); err != nil {
-		return fmt.Errorf("run HTTP server: %w", err)
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- server.Run()
+	}()
+
+	var runErr error
+	serverStopped := false
+	select {
+	case <-ctx.Done():
+	case err := <-serverErr:
+		serverStopped = true
+		if err != nil {
+			runErr = fmt.Errorf("run HTTP server: %w", err)
+		}
 	}
+
+	shutdownCtx, cancel := context.WithTimeout(
+		context.WithoutCancel(ctx),
+		cfg.HTTP.ShutdownTimeout,
+	)
+	defer cancel()
+
+	httpShutdownErr := server.Shutdown(shutdownCtx)
+	if !serverStopped {
+		if err := <-serverErr; err != nil {
+			runErr = errors.Join(runErr, fmt.Errorf("run HTTP server: %w", err))
+		}
+	}
+	containerShutdownErr := app.Shutdown(shutdownCtx)
 
 	app.Logger.Info(
 		"HTTP server stopped",
 	)
 
-	return nil
+	return errors.Join(
+		runErr,
+		httpShutdownErr,
+		containerShutdownErr,
+	)
 }

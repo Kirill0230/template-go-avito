@@ -2,39 +2,42 @@ package http
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/Kirill0230/template-go-avito/internal/config"
 )
 
-func Run(ctx context.Context, handler http.Handler, cfg config.HTTPConfig) error {
-	srv := &http.Server{
+type HTTPServer struct {
+	server *http.Server
+}
+
+func NewHTTPServer(handler http.Handler, cfg config.HTTPConfig) *HTTPServer {
+	return &HTTPServer{server: &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           handler,
 		ReadTimeout:       cfg.ReadTimeout,
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 		IdleTimeout:       cfg.IdleTimeout,
 		WriteTimeout:      cfg.WriteTimeout,
-	}
+	}}
+}
 
-	serverErr := make(chan error, 1)
-	go func() {
-		serverErr <- srv.ListenAndServe()
-	}()
-
-	select {
-	case err := <-serverErr:
+func (s *HTTPServer) Run() error {
+	err := s.server.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("http server: %w", err)
-	case <-ctx.Done():
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), cfg.ShutdownTimeout)
-	defer cancel()
+	return nil
+}
 
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		_ = srv.Close()
+func (s *HTTPServer) Shutdown(ctx context.Context) error {
+	if err := s.server.Shutdown(ctx); err != nil {
+		_ = s.server.Close()
 		return fmt.Errorf("shutdown timeout exceeded, forced close: %w", err)
 	}
+
 	return nil
 }

@@ -15,16 +15,6 @@ const (
 	endPointField   = "end_point"
 )
 
-func validatePoint(name string, p api.Coordinates) error {
-	if p.Latitude < -90 || p.Latitude > 90 {
-		return fmt.Errorf("%s.latitude out of range", name)
-	}
-	if p.Longitude < -180 || p.Longitude > 180 {
-		return fmt.Errorf("%s.longitude out of range", name)
-	}
-	return nil
-}
-
 func checkRequired(raw []byte) error {
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &fields); err != nil || fields == nil {
@@ -73,17 +63,6 @@ func validateTripData(d api.TripData) error {
 	}
 	if d.DriverId == uuid.Nil {
 		return errors.New("driver_id is required")
-	}
-	err := validatePoint(startPointField, d.StartPoint)
-	if err != nil {
-		return err
-	}
-	err = validatePoint(endPointField, d.EndPoint)
-	if err != nil {
-		return err
-	}
-	if d.Price < 0 {
-		return errors.New("price must be >= 0")
 	}
 	return nil
 }

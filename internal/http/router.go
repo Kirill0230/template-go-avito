@@ -44,20 +44,16 @@ func NewRouter(
 	router := chi.NewRouter()
 
 	router.Use(
-		httpmiddleware.Recover(logger),
 		httpmiddleware.Tracing,
 		httpmiddleware.Logging(logger),
+		httpmiddleware.Metrics(httpMetrics),
+		httpmiddleware.Recover(logger),
 	)
 
 	return api.HandlerWithOptions(
 		s,
 		api.ChiServerOptions{
 			BaseRouter: router,
-			Middlewares: []api.MiddlewareFunc{
-				api.MiddlewareFunc(
-					httpmiddleware.Metrics(httpMetrics),
-				),
-			},
 			ErrorHandlerFunc: func(
 				w http.ResponseWriter,
 				r *http.Request,

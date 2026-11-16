@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/Kirill0230/template-go-avito/internal/domain/trip"
+	"github.com/Kirill0230/template-go-avito/internal/infra/postgres"
 	"github.com/Kirill0230/template-go-avito/internal/infra/postgres/transaction"
 	"github.com/Kirill0230/template-go-avito/internal/model"
 )
@@ -15,6 +16,7 @@ import (
 func (r *TripRepository) Save(ctx context.Context, modelTrip model.Trip) error {
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
+	ctx = postgres.WithDBCollection(ctx, "trips")
 
 	query, args, err := r.psql.Insert("trips").Columns(tripColumns...).Values(
 		modelTrip.Id,

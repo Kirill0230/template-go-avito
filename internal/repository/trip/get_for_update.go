@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/Kirill0230/template-go-avito/internal/domain/trip"
+	"github.com/Kirill0230/template-go-avito/internal/infra/postgres"
 	"github.com/Kirill0230/template-go-avito/internal/infra/postgres/transaction"
 	"github.com/Kirill0230/template-go-avito/internal/model"
 )
@@ -17,6 +18,7 @@ import (
 func (r *TripRepository) GetForUpdate(ctx context.Context, id uuid.UUID) (*model.Trip, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
+	ctx = postgres.WithDBCollection(ctx, "trips")
 	query, args, err := r.psql.Select(tripColumns...).From("trips").Where(sq.Eq{"id": id}).Suffix("FOR UPDATE").ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("build get trip query: %w", err)

@@ -36,21 +36,35 @@ func NewService(
 }
 
 func (s *Service) CreateTrip(ctx context.Context, modelTrip model.Trip, idempotencyKey *uuid.UUID) (*model.Trip, bool, error) {
-	resultTrip := &modelTrip
+	newTripID := uuid.New()
+	now := time.Now()
+
+	newTrip, err := domaintrip.CreateTrip(
+		newTripID,
+		modelTrip.UserId,
+		modelTrip.DriverId,
+		modelTrip.Price,
+		domaintrip.Point{
+			Latitude:  modelTrip.StartPoint.Latitude,
+			Longitude: modelTrip.StartPoint.Longitude,
+		},
+		domaintrip.Point{
+			Latitude:  modelTrip.EndPoint.Latitude,
+			Longitude: modelTrip.EndPoint.Longitude,
+		},
+		now,
+	)
+	if err != nil {
+		return nil, false, err
+	}
+
+	mappedTrip := tripmapper.DomainToModel(newTrip)
+	resultTrip := &mappedTrip
 	created := true
 
-	err := s.tx.Do(ctx, func(ctx context.Context) error {
-		newTripId := uuid.New()
-
-		now := time.Now()
-
-		modelTrip.Id = newTripId
-		modelTrip.Status = model.Active
-		modelTrip.StartedAt = &now
-		modelTrip.LastPositionAt = &now
-
+	err = s.tx.Do(ctx, func(ctx context.Context) error {
 		if idempotencyKey != nil {
-			claimed, err := s.idempotencyRepo.Claim(ctx, *idempotencyKey, newTripId)
+			claimed, err := s.idempotencyRepo.Claim(ctx, *idempotencyKey, newTripID)
 			if err != nil {
 				return err
 			}
@@ -69,12 +83,7 @@ func (s *Service) CreateTrip(ctx context.Context, modelTrip model.Trip, idempote
 					return err
 				}
 
-				domainTrip, err := tripmapper.ModelToDomain(modelTrip)
-				if err != nil {
-					return err
-				}
-
-				if !alreadyTrip.SameRequest(domainTrip) {
+				if !alreadyTrip.SameRequest(newTrip) {
 					return domaintrip.ErrIdempotencyConflict
 				}
 
@@ -85,24 +94,6 @@ func (s *Service) CreateTrip(ctx context.Context, modelTrip model.Trip, idempote
 				return nil
 			}
 		}
-
-		newTrip := domaintrip.CreateTrip(
-			modelTrip.Id,
-			modelTrip.UserId,
-			modelTrip.DriverId,
-			modelTrip.Price,
-			domaintrip.Point{
-				Latitude:  modelTrip.StartPoint.Latitude,
-				Longitude: modelTrip.StartPoint.Longitude,
-			},
-			domaintrip.Point{
-				Latitude:  modelTrip.EndPoint.Latitude,
-				Longitude: modelTrip.EndPoint.Longitude,
-			},
-			*modelTrip.StartedAt,
-		)
-
-		mappedTrip := tripmapper.DomainToModel(newTrip)
 
 		err := s.tripRepo.Save(ctx, mappedTrip)
 		if err != nil {
