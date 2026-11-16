@@ -14,8 +14,8 @@ type Config struct {
 	LogLevel string
 
 	DatabaseURL             string
-	DatabaseMaxConns        int
-	DatabaseMinConns        int
+	DatabaseMaxConns        int32
+	DatabaseMinConns        int32
 	DatabaseMaxConnLifetime time.Duration
 	DatabaseConnectTimeout  time.Duration
 	DatabaseQueryTimeout    time.Duration
@@ -58,12 +58,12 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
-	cfg.DatabaseMaxConns, err = requireInt("DATABASE_MAX_CONNS")
+	cfg.DatabaseMaxConns, err = requireInt32("DATABASE_MAX_CONNS")
 	if err != nil {
 		return Config{}, err
 	}
 
-	cfg.DatabaseMinConns, err = requireInt("DATABASE_MIN_CONNS")
+	cfg.DatabaseMinConns, err = requireInt32("DATABASE_MIN_CONNS")
 	if err != nil {
 		return Config{}, err
 	}
@@ -124,18 +124,18 @@ func requireString(key string) (string, error) {
 	return v, nil
 }
 
-func requireInt(key string) (int, error) {
+func requireInt32(key string) (int32, error) {
 	v, err := requireString(key)
 	if err != nil {
 		return 0, err
 	}
 
-	n, err := strconv.Atoi(v)
+	n, err := strconv.ParseInt(v, 10, 32)
 	if err != nil {
 		return 0, fmt.Errorf("%s must be an integer: %w", key, err)
 	}
 
-	return n, nil
+	return int32(n), nil
 }
 
 func requireDuration(key string) (time.Duration, error) {
