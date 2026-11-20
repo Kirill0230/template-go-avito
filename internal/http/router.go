@@ -9,6 +9,8 @@ import (
 	api "github.com/Kirill0230/template-go-avito/internal/generated"
 	"github.com/Kirill0230/template-go-avito/internal/http/health"
 	httpmiddleware "github.com/Kirill0230/template-go-avito/internal/http/middleware"
+	positioncreate "github.com/Kirill0230/template-go-avito/internal/http/position/create"
+	positionlist "github.com/Kirill0230/template-go-avito/internal/http/position/list"
 	"github.com/Kirill0230/template-go-avito/internal/http/response"
 	"github.com/Kirill0230/template-go-avito/internal/http/trip/create"
 	"github.com/Kirill0230/template-go-avito/internal/http/trip/finish"
@@ -16,10 +18,12 @@ import (
 )
 
 type Server struct {
-	create *create.Handler
-	get    *get.Handler
-	finish *finish.Handler
-	health *health.Handler
+	create         *create.Handler
+	get            *get.Handler
+	finish         *finish.Handler
+	health         *health.Handler
+	positionCreate *positioncreate.Handler
+	positionList   *positionlist.Handler
 }
 
 func NewServer(
@@ -27,12 +31,16 @@ func NewServer(
 	getH *get.Handler,
 	finishH *finish.Handler,
 	healthH *health.Handler,
+	positionCreateH *positioncreate.Handler,
+	positionListH *positionlist.Handler,
 ) *Server {
 	return &Server{
-		create: createH,
-		get:    getH,
-		finish: finishH,
-		health: healthH,
+		create:         createH,
+		get:            getH,
+		finish:         finishH,
+		health:         healthH,
+		positionCreate: positionCreateH,
+		positionList:   positionListH,
 	}
 }
 
@@ -89,4 +97,12 @@ func (s *Server) Health(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) Ready(w http.ResponseWriter, r *http.Request) {
 	s.health.Ready(w, r)
+}
+
+func (s *Server) CreateTripPosition(w http.ResponseWriter, r *http.Request, tripID api.TripId) {
+	s.positionCreate.CreateTripPosition(w, r, tripID)
+}
+
+func (s *Server) ListTripPositions(w http.ResponseWriter, r *http.Request, tripID api.TripId) {
+	s.positionList.ListTripPositions(w, r, tripID)
 }

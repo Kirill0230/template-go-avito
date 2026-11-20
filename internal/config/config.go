@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -10,8 +11,10 @@ import (
 )
 
 type Config struct {
-	HTTP     HTTPConfig
-	LogLevel string
+	HTTP      HTTPConfig
+	Positions PositionsConfig
+	Push      PushConfig
+	LogLevel  string
 
 	DatabaseURL             string
 	DatabaseMaxConns        int32
@@ -19,6 +22,19 @@ type Config struct {
 	DatabaseMaxConnLifetime time.Duration
 	DatabaseConnectTimeout  time.Duration
 	DatabaseQueryTimeout    time.Duration
+}
+
+type PositionsConfig struct {
+	CheckInterval time.Duration
+	StaleAfter    time.Duration
+	Workers       int
+	QueueSize     int
+	ScanBatchSize int
+}
+
+type PushConfig struct {
+	HTTPURL        string
+	RequestTimeout time.Duration
 }
 
 type HTTPConfig struct {
@@ -113,6 +129,45 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	cfg.Positions.CheckInterval, err = requireDuration("POSITION_CHECK_INTERVAL")
+	if err != nil {
+		return Config{}, err
+	}
+
+	cfg.Positions.StaleAfter, err = requireDuration("POSITION_STALE_AFTER")
+	if err != nil {
+		return Config{}, err
+	}
+
+	cfg.Positions.Workers, err = requirePositiveInt("POSITION_WORKERS")
+	if err != nil {
+		return Config{}, err
+	}
+
+	cfg.Positions.QueueSize, err = requirePositiveInt("POSITION_QUEUE_SIZE")
+	if err != nil {
+		return Config{}, err
+	}
+
+	cfg.Positions.ScanBatchSize, err = requirePositiveInt("POSITION_SCAN_BATCH_SIZE")
+	if err != nil {
+		return Config{}, err
+	}
+
+	cfg.Push.HTTPURL, err = requireString("PUSH_HTTP_URL")
+	if err != nil {
+		return Config{}, err
+	}
+	pushURL, err := url.ParseRequestURI(cfg.Push.HTTPURL)
+	if err != nil || pushURL.Scheme == "" || pushURL.Host == "" {
+		return Config{}, fmt.Errorf("PUSH_HTTP_URL must be a valid absolute URL")
+	}
+
+	cfg.Push.RequestTimeout, err = requireDuration("PUSH_REQUEST_TIMEOUT")
+	if err != nil {
+		return Config{}, err
+	}
+
 	return cfg, nil
 }
 
@@ -136,6 +191,23 @@ func requireInt32(key string) (int32, error) {
 	}
 
 	return int32(n), nil
+}
+
+func requirePositiveInt(key string) (int, error) {
+	v, err := requireString(key)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be an integer: %w", key, err)
+	}
+	if n <= 0 {
+		return 0, fmt.Errorf("%s must be greater than zero", key)
+	}
+
+	return n, nil
 }
 
 func requireDuration(key string) (time.Duration, error) {

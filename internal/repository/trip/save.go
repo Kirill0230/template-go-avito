@@ -30,6 +30,7 @@ func (r *TripRepository) Save(ctx context.Context, modelTrip model.Trip) error {
 		string(modelTrip.Status),
 		modelTrip.StartedAt,
 		modelTrip.FinishedAt,
+		modelTrip.LastPositionAt,
 	).ToSql()
 	if err != nil {
 		return fmt.Errorf("build add trip query: %w", err)

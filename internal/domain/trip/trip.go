@@ -39,15 +39,14 @@ func CreateTrip(id, userID, driverID uuid.UUID, price int64, startPoint, endPoin
 	}
 
 	return &Trip{
-		id:             id,
-		userId:         userID,
-		driverId:       driverID,
-		price:          price,
-		status:         Active,
-		startPoint:     startPoint,
-		endPoint:       endPoint,
-		startedAt:      &at,
-		lastPositionAt: &at,
+		id:         id,
+		userId:     userID,
+		driverId:   driverID,
+		price:      price,
+		status:     Active,
+		startPoint: startPoint,
+		endPoint:   endPoint,
+		startedAt:  &at,
 	}, nil
 }
 
@@ -108,6 +107,20 @@ func (t *Trip) Finish(at time.Time) error {
 	}
 	t.status = Completed
 	t.finishedAt = &at
+	return nil
+}
+
+func (t *Trip) AcceptPosition(point Point, recordedAt, now time.Time) error {
+	if t.status != Active {
+		return ErrTripCompleted
+	}
+	if err := validatePoint("position", point); err != nil {
+		return err
+	}
+	if recordedAt.IsZero() || recordedAt.After(now.Add(time.Minute)) {
+		return ErrInvalidRecordedAt
+	}
+
 	return nil
 }
 

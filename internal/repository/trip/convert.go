@@ -20,6 +20,7 @@ type tripRow struct {
 	Status         string     `db:"status"`
 	StartedAt      time.Time  `db:"started_at"`
 	FinishedAt     *time.Time `db:"finished_at"`
+	LastPositionAt *time.Time `db:"last_position_at"`
 }
 
 func (r tripRow) toModel() *model.Trip {
@@ -37,9 +38,10 @@ func (r tripRow) toModel() *model.Trip {
 			Latitude:  r.EndLatitude,
 			Longitude: r.EndLongitude,
 		},
-		Price:      r.Price,
-		Status:     model.Status(r.Status),
-		StartedAt:  &startedAt,
-		FinishedAt: r.FinishedAt,
+		Price:          r.Price,
+		Status:         model.Status(r.Status),
+		StartedAt:      &startedAt,
+		FinishedAt:     r.FinishedAt,
+		LastPositionAt: r.LastPositionAt,
 	}
 }

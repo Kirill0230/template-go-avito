@@ -10,4 +10,5 @@ var (
 
 	ErrInvalidPrice       = errors.New("invalid trip price")
 	ErrInvalidCoordinates = errors.New("invalid trip coordinates")
+	ErrInvalidRecordedAt  = errors.New("invalid position recorded_at")
 )

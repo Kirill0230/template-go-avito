@@ -188,3 +188,40 @@ func TestCreateTripValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestTripAcceptPosition(t *testing.T) {
+	now := time.Date(2026, time.November, 20, 12, 0, 0, 0, time.UTC)
+	active := mustCreateTrip(
+		t, uuid.New(), uuid.New(), uuid.New(), 1000,
+		domaintrip.Point{Latitude: 55, Longitude: 37},
+		domaintrip.Point{Latitude: 56, Longitude: 38}, now.Add(-time.Hour),
+	)
+
+	tests := []struct {
+		name       string
+		point      domaintrip.Point
+		recordedAt time.Time
+		wantErr    error
+	}{
+		{name: "valid", point: domaintrip.Point{Latitude: 59.93, Longitude: 30.33}, recordedAt: now},
+		{name: "bad coordinates", point: domaintrip.Point{Latitude: 91, Longitude: 30}, recordedAt: now, wantErr: domaintrip.ErrInvalidCoordinates},
+		{name: "zero time", point: domaintrip.Point{}, recordedAt: time.Time{}, wantErr: domaintrip.ErrInvalidRecordedAt},
+		{name: "too far in future", point: domaintrip.Point{}, recordedAt: now.Add(time.Minute + time.Nanosecond), wantErr: domaintrip.ErrInvalidRecordedAt},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := active.AcceptPosition(tt.point, tt.recordedAt, now); !errors.Is(err, tt.wantErr) {
+				t.Fatalf("AcceptPosition() error = %v, want %v", err, tt.wantErr)
+			}
+		})
+	}
+
+	finishedAt := now
+	completed := domaintrip.RestoreTrip(
+		uuid.New(), uuid.New(), uuid.New(), 1000, domaintrip.Completed,
+		domaintrip.Point{}, domaintrip.Point{}, &now, &finishedAt, nil,
+	)
+	if err := completed.AcceptPosition(domaintrip.Point{}, now, now); !errors.Is(err, domaintrip.ErrTripCompleted) {
+		t.Fatalf("completed AcceptPosition() error = %v", err)
+	}
+}

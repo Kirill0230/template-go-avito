@@ -23,3 +23,21 @@ type Trip struct {
 	FinishedAt     *time.Time
 	LastPositionAt *time.Time
 }
+
+type TripPosition struct {
+	ID          int64
+	TripID      uuid.UUID
+	Coordinates Point
+	RecordedAt  time.Time
+}
+
+type StaleTrip struct {
+	ID          uuid.UUID
+	DriverID    uuid.UUID
+	SilentSince time.Time
+}
+
+type StaleTripCursor struct {
+	SilentSince time.Time
+	ID          uuid.UUID
+}

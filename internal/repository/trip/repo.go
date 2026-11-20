@@ -33,4 +33,5 @@ var tripColumns = []string{
 	"status",
 	"started_at",
 	"finished_at",
+	"last_position_at",
 }
