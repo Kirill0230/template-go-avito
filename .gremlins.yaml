@@ -1,0 +1,12 @@
+unleash:
+  workers: 4
+  timeout-coefficient: 3
+  exclude-files:
+    - "^cmd/"
+    - "^internal/config/"
+    - "^internal/container/"
+    - "^internal/generated/"
+    - "^internal/http/"
+    - "^internal/infra/"
+    - "^internal/model/"
+    - "^internal/repository/"

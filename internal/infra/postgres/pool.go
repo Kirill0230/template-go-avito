@@ -1,0 +1,42 @@
+package postgres
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Kirill0230/template-go-avito/internal/config"
+)
+
+func NewPool(ctx context.Context, cfg config.Config) (*pgxpool.Pool, error) {
+	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse database url: %w", err)
+	}
+
+	poolCfg.MaxConns = cfg.DatabaseMaxConns
+	poolCfg.MinConns = cfg.DatabaseMinConns
+	poolCfg.MaxConnLifetime = cfg.DatabaseMaxConnLifetime
+	poolCfg.ConnConfig.ConnectTimeout = cfg.DatabaseConnectTimeout
+
+	dbTracer, err := newTracer()
+	if err != nil {
+		return nil, err
+	}
+	poolCfg.ConnConfig.Tracer = dbTracer
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		return nil, fmt.Errorf("create pool: %w", err)
+	}
+
+	pingCtx, cancel := context.WithTimeout(ctx, cfg.DatabaseQueryTimeout)
+	defer cancel()
+	if err := pool.Ping(pingCtx); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("database unavailable: %w", err)
+	}
+
+	return pool, nil
+}
